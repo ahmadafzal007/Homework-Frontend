@@ -9,12 +9,15 @@ const nextConfig: NextConfig = {
     pagesBufferLength: 2,
   },
   async rewrites() {
-    return [
-      {
-        source: "/api/backend/:path*",
-        destination: "http://127.0.0.1:8006/:path*",
-      },
-    ];
+    if (process.env.NODE_ENV === "development") {
+      return [
+        {
+          source: "/homeword/:path*",
+          destination: "http://127.0.0.1:8006/:path*",
+        },
+      ];
+    }
+    return [];
   },
 };
 

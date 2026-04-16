@@ -1,0 +1,18 @@
+[Unit]
+Description=Homework Frontend (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=administrator
+WorkingDirectory=/home/administrator/Desktop/projects/homework/frontend
+Environment=NODE_ENV=production
+
+# Start Next.js on localhost only (Nginx will proxy public traffic)
+ExecStart=/usr/bin/node /home/administrator/Desktop/projects/homework/frontend/node_modules/next/dist/bin/next start -p 3002 -H 127.0.0.1
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

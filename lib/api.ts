@@ -6,7 +6,7 @@ import type {
 } from "./types";
 import { clearToken, getToken } from "./auth";
 
-const BASE = "/api/backend";
+const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "https://midl.comsats.edu.pk/homeword";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
