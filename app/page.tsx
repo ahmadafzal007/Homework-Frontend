@@ -809,6 +809,12 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                     <div className="engine-panel-title">Ranked Recommendations</div>
                     <div className="engine-panel-body-scroll">
                       {agenticErr && <p className="dashboard-alert-error">{agenticErr}</p>}
+                      {agenticResult?.uncertainty_note && (
+                        <div className="engine-uncertainty-note" role="note">
+                          <span className="engine-uncertainty-label">Note</span>
+                          <span className="engine-uncertainty-text">{agenticResult.uncertainty_note}</span>
+                        </div>
+                      )}
                       {agenticResult?.recommendations.map((a, i) => (
                         <RecommendationCard key={`agentic-${a.action_type}-${i}`} action={a} rank={i + 1} />
                       ))}
@@ -851,6 +857,12 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                     <div className="engine-panel-title">Ranked Recommendations</div>
                     <div className="engine-panel-body-scroll">
                       {heuristicErr && <p className="dashboard-alert-error">{heuristicErr}</p>}
+                      {heuristicResult?.uncertainty_note && (
+                        <div className="engine-uncertainty-note" role="note">
+                          <span className="engine-uncertainty-label">Note</span>
+                          <span className="engine-uncertainty-text">{heuristicResult.uncertainty_note}</span>
+                        </div>
+                      )}
                       {heuristicResult?.recommendations.map((a, i) => (
                         <RecommendationCard key={`heuristic-${a.action_type}-${i}`} action={a} rank={i + 1} />
                       ))}

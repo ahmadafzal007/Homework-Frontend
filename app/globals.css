@@ -180,6 +180,34 @@
   font-size: 12px;
   line-height: 1.55;
 }
+.engine-uncertainty-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  background: rgba(167, 139, 250, 0.07);
+  color: #d4d4d8;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.engine-uncertainty-label {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+.engine-uncertainty-text {
+  flex: 1;
+}
 .overview-engine-grid {
   margin-top: 18px;
   display: grid;
