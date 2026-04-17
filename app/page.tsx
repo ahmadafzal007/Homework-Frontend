@@ -62,6 +62,42 @@ function MarkdownView({ value }: { value: string }) {
   );
 }
 
+/** Matches `backend/src/core/heuristics.py` when no extra uncertainty parts — routine, not worth a banner. */
+const HEURISTIC_UNCERTAINTY_DEFAULT =
+  "Deterministic heuristic applied based on standard sales logic.";
+
+function UncertaintyNoteBanner({
+  note,
+  variant,
+}: {
+  note: string | null | undefined;
+  variant: "agentic" | "heuristic";
+}) {
+  const trimmed = (note ?? "").trim();
+  if (!trimmed) return null;
+  if (variant === "heuristic" && trimmed === HEURISTIC_UNCERTAINTY_DEFAULT) return null;
+
+  const parts = trimmed.split(/\s*\|\s*/).map((s) => s.trim()).filter(Boolean);
+  const label = variant === "heuristic" ? "Heuristic context" : "Note";
+
+  return (
+    <div className="engine-uncertainty-note" role="note">
+      <span className="engine-uncertainty-label">{label}</span>
+      <div className="engine-uncertainty-text">
+        {parts.length <= 1 ? (
+          <p className="engine-uncertainty-para">{trimmed}</p>
+        ) : (
+          <ul className="engine-uncertainty-list">
+            {parts.map((p, i) => (
+              <li key={i}>{p}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CircleLoader({ size = 28 }: { size?: number }) {
   return (
     <svg
@@ -809,12 +845,7 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                     <div className="engine-panel-title">Ranked Recommendations</div>
                     <div className="engine-panel-body-scroll">
                       {agenticErr && <p className="dashboard-alert-error">{agenticErr}</p>}
-                      {agenticResult?.uncertainty_note && (
-                        <div className="engine-uncertainty-note" role="note">
-                          <span className="engine-uncertainty-label">Note</span>
-                          <span className="engine-uncertainty-text">{agenticResult.uncertainty_note}</span>
-                        </div>
-                      )}
+                      <UncertaintyNoteBanner note={agenticResult?.uncertainty_note} variant="agentic" />
                       {agenticResult?.recommendations.map((a, i) => (
                         <RecommendationCard key={`agentic-${a.action_type}-${i}`} action={a} rank={i + 1} />
                       ))}
@@ -857,12 +888,7 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                     <div className="engine-panel-title">Ranked Recommendations</div>
                     <div className="engine-panel-body-scroll">
                       {heuristicErr && <p className="dashboard-alert-error">{heuristicErr}</p>}
-                      {heuristicResult?.uncertainty_note && (
-                        <div className="engine-uncertainty-note" role="note">
-                          <span className="engine-uncertainty-label">Note</span>
-                          <span className="engine-uncertainty-text">{heuristicResult.uncertainty_note}</span>
-                        </div>
-                      )}
+                      <UncertaintyNoteBanner note={heuristicResult?.uncertainty_note} variant="heuristic" />
                       {heuristicResult?.recommendations.map((a, i) => (
                         <RecommendationCard key={`heuristic-${a.action_type}-${i}`} action={a} rank={i + 1} />
                       ))}

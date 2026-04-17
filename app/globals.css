@@ -207,6 +207,20 @@
 }
 .engine-uncertainty-text {
   flex: 1;
+  min-width: 0;
+}
+.engine-uncertainty-para {
+  margin: 0;
+}
+.engine-uncertainty-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.engine-uncertainty-list li {
+  margin: 0;
 }
 .overview-engine-grid {
   margin-top: 18px;
