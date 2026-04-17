@@ -212,9 +212,26 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const [selectedRecord, setSelectedRecord] = useState<CRMRecord | null>(null);
   const [customerDetail, setCustomerDetail] = useState<CRMRecord | null>(null);
 
-  const [nbaResult, setNbaResult] = useState<NBARResponse | null>(null);
-  const [nbaLoading, setNbaLoading] = useState(false);
-  const [nbaErr, setNbaErr] = useState<string | null>(null);
+  // Per-engine, per-record frontend caches. Keeping these separate guarantees
+  // the AI Engine view only ever renders agentic results and the Rank Engine
+  // view only ever renders heuristic results, and that navigating back to a
+  // customer already analyzed shows the prior result instantly without a
+  // refetch. They also mirror the server-side separation that the backend
+  // uses (agentic_<id> vs heuristic_<id> cache keys).
+  const [agenticCache, setAgenticCache] = useState<Record<string, NBARResponse>>({});
+  const [heuristicCache, setHeuristicCache] = useState<Record<string, NBARResponse>>({});
+  const [agenticLoadingId, setAgenticLoadingId] = useState<string | null>(null);
+  const [heuristicLoadingId, setHeuristicLoadingId] = useState<string | null>(null);
+  const [agenticErrors, setAgenticErrors] = useState<Record<string, string>>({});
+  const [heuristicErrors, setHeuristicErrors] = useState<Record<string, string>>({});
+
+  const currentRecordId = selectedRecord?.person.id ?? null;
+  const agenticResult = currentRecordId ? agenticCache[currentRecordId] ?? null : null;
+  const heuristicResult = currentRecordId ? heuristicCache[currentRecordId] ?? null : null;
+  const agenticLoading = currentRecordId !== null && agenticLoadingId === currentRecordId;
+  const heuristicLoading = currentRecordId !== null && heuristicLoadingId === currentRecordId;
+  const agenticErr = currentRecordId ? agenticErrors[currentRecordId] ?? null : null;
+  const heuristicErr = currentRecordId ? heuristicErrors[currentRecordId] ?? null : null;
 
   const [readmeMd, setReadmeMd] = useState<string | null>(null);
   const [aiUsageMd, setAiUsageMd] = useState<string | null>(null);
@@ -306,30 +323,42 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   }, [debouncedCustomerSearchInput, customerSearchInput, view, recordsRemoteQuery]);
 
   const runAgentic = async (rec: CRMRecord) => {
-    setNbaLoading(true);
-    setNbaErr(null);
-    setNbaResult(null);
+    const recordId = rec.person.id;
+    setAgenticLoadingId(recordId);
+    setAgenticErrors((prev) => {
+      if (!(recordId in prev)) return prev;
+      const next = { ...prev };
+      delete next[recordId];
+      return next;
+    });
     try {
       const out = await recommend(rec, "agentic", false);
-      setNbaResult(out);
+      setAgenticCache((c) => ({ ...c, [recordId]: out }));
     } catch (e: unknown) {
-      setNbaErr(e instanceof Error ? e.message : "Analysis failed");
+      const msg = e instanceof Error ? e.message : "Analysis failed";
+      setAgenticErrors((prev) => ({ ...prev, [recordId]: msg }));
     } finally {
-      setNbaLoading(false);
+      setAgenticLoadingId((prev) => (prev === recordId ? null : prev));
     }
   };
 
   const runHeuristic = async (rec: CRMRecord) => {
-    setNbaLoading(true);
-    setNbaErr(null);
-    setNbaResult(null);
+    const recordId = rec.person.id;
+    setHeuristicLoadingId(recordId);
+    setHeuristicErrors((prev) => {
+      if (!(recordId in prev)) return prev;
+      const next = { ...prev };
+      delete next[recordId];
+      return next;
+    });
     try {
       const out = await recommendHeuristic(rec, false);
-      setNbaResult(out);
+      setHeuristicCache((c) => ({ ...c, [recordId]: out }));
     } catch (e: unknown) {
-      setNbaErr(e instanceof Error ? e.message : "Analysis failed");
+      const msg = e instanceof Error ? e.message : "Analysis failed";
+      setHeuristicErrors((prev) => ({ ...prev, [recordId]: msg }));
     } finally {
-      setNbaLoading(false);
+      setHeuristicLoadingId((prev) => (prev === recordId ? null : prev));
     }
   };
 
@@ -771,7 +800,7 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                       <CRMForm
                         initialRecord={selectedRecord}
                         onSubmit={runAgentic}
-                        loading={nbaLoading}
+                        loading={agenticLoading}
                         submitLabel="Run agentic analysis"
                       />
                     </div>
@@ -779,11 +808,11 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                   <div className="engine-results-panel">
                     <div className="engine-panel-title">Ranked Recommendations</div>
                     <div className="engine-panel-body-scroll">
-                      {nbaErr && <p className="dashboard-alert-error">{nbaErr}</p>}
-                      {nbaResult?.recommendations.map((a, i) => (
-                        <RecommendationCard key={`${a.action_type}-${i}`} action={a} rank={i + 1} />
+                      {agenticErr && <p className="dashboard-alert-error">{agenticErr}</p>}
+                      {agenticResult?.recommendations.map((a, i) => (
+                        <RecommendationCard key={`agentic-${a.action_type}-${i}`} action={a} rank={i + 1} />
                       ))}
-                      {!nbaErr && !nbaLoading && !nbaResult && (
+                      {!agenticErr && !agenticLoading && !agenticResult && (
                         <div className="engine-empty-state">
                           Submit a customer profile to generate ranked AI recommendations.
                         </div>
@@ -813,7 +842,7 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                       <CRMForm
                         initialRecord={selectedRecord}
                         onSubmit={runHeuristic}
-                        loading={nbaLoading}
+                        loading={heuristicLoading}
                         submitLabel="Run rule-based analysis"
                       />
                     </div>
@@ -821,11 +850,11 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                   <div className="engine-results-panel">
                     <div className="engine-panel-title">Ranked Recommendations</div>
                     <div className="engine-panel-body-scroll">
-                      {nbaErr && <p className="dashboard-alert-error">{nbaErr}</p>}
-                      {nbaResult?.recommendations.map((a, i) => (
-                        <RecommendationCard key={`${a.action_type}-${i}`} action={a} rank={i + 1} />
+                      {heuristicErr && <p className="dashboard-alert-error">{heuristicErr}</p>}
+                      {heuristicResult?.recommendations.map((a, i) => (
+                        <RecommendationCard key={`heuristic-${a.action_type}-${i}`} action={a} rank={i + 1} />
                       ))}
-                      {!nbaErr && !nbaLoading && !nbaResult && (
+                      {!heuristicErr && !heuristicLoading && !heuristicResult && (
                         <div className="engine-empty-state">
                           Submit a customer profile to generate deterministic ranked recommendations.
                         </div>
